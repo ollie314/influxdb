@@ -684,28 +684,9 @@ func (s *Store) deleteSeries(database string, seriesKeys []string, min, max int6
 	s.mu.RUnlock()
 
 	return s.walkShards(shards, func(sh *Shard) error {
-		if sh.database != database {
-			return nil
-		}
-
 		if err := sh.DeleteSeriesRange(seriesKeys, min, max); err != nil {
 			return err
 		}
-
-		// The keys we passed in may be fully deleted from the shard, if so,
-		// we need to remove the shard from all the meta data indices.
-		existing, err := sh.ContainsSeries(seriesKeys)
-		if err != nil {
-			return err
-		}
-
-		var toDelete []string
-		for k, exists := range existing {
-			if !exists {
-				toDelete = append(toDelete, k)
-			}
-		}
-		sh.index.DropSeries(toDelete)
 		return nil
 	})
 }
