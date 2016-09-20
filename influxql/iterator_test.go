@@ -697,6 +697,78 @@ func TestLimitIterator(t *testing.T) {
 	}
 }
 
+// Ensure the lazy iterator works.
+func TestLazyIterator(t *testing.T) {
+	var initialized [3]bool
+	ics := []influxql.IteratorCreator{
+		&IteratorCreator{
+			CreateIteratorFn: func(opt influxql.IteratorOptions) (influxql.Iterator, error) {
+				initialized[0] = true
+				return &FloatIterator{Points: []influxql.FloatPoint{
+					{Time: 0, Value: 0},
+				}}, nil
+			},
+		},
+		&IteratorCreator{
+			CreateIteratorFn: func(opt influxql.IteratorOptions) (influxql.Iterator, error) {
+				initialized[1] = true
+				return &StringIterator{Points: []influxql.StringPoint{
+					{Time: 1, Value: "a"},
+				}}, nil
+			},
+		},
+		&IteratorCreator{
+			CreateIteratorFn: func(opt influxql.IteratorOptions) (influxql.Iterator, error) {
+				initialized[2] = true
+				return &FloatIterator{Points: []influxql.FloatPoint{
+					{Time: 2, Value: 2},
+				}}, nil
+			},
+		},
+	}
+
+	input, err := influxql.NewLazyIterator(ics, influxql.IteratorOptions{})
+	if err != nil {
+		t.Fatal(err)
+	} else if !initialized[0] {
+		t.Fatalf("did not initialize the first iterator")
+	}
+	itr := input.(influxql.FloatIterator)
+
+	if want := [3]bool{true, false, false}; !reflect.DeepEqual(initialized, want) {
+		t.Fatalf("unexpected iterator initialization: %v != %v", initialized, want)
+	}
+
+	p, err := itr.Next()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	want := &influxql.FloatPoint{Time: 0, Value: 0}
+	if !reflect.DeepEqual(p, want) {
+		t.Fatalf("unexpected point: %v != %v", p, want)
+	}
+
+	p, err = itr.Next()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	} else if want := [3]bool{true, true, true}; !reflect.DeepEqual(initialized, want) {
+		t.Fatalf("unexpected iterator initialization: %v != %v", initialized, want)
+	}
+
+	want = &influxql.FloatPoint{Time: 2, Value: 2}
+	if !reflect.DeepEqual(p, want) {
+		t.Fatalf("unexpected point: %v != %v", p, want)
+	}
+
+	p, err = itr.Next()
+	if p != nil {
+		t.Fatalf("unexpected point: %v", p)
+	} else if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 // Iterators is a test wrapper for iterators.
 type Iterators []influxql.Iterator
 

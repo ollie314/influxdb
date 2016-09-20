@@ -294,6 +294,38 @@ func NewDedupeIterator(input Iterator) Iterator {
 	}
 }
 
+// NewLazyIterator returns an iterator that lazily creates iterators from each IteratorCreator.
+func NewLazyIterator(ics IteratorCreators, opt IteratorOptions) (Iterator, error) {
+	for {
+		if len(ics) == 0 {
+			return nil, nil
+		}
+
+		input, err := ics[0].CreateIterator(opt)
+		if err != nil {
+			return nil, err
+		}
+		ics = ics[1:]
+
+		if input == nil {
+			continue
+		}
+
+		switch input := input.(type) {
+		case FloatIterator:
+			return newFloatLazyIterator(input, ics, opt), nil
+		case IntegerIterator:
+			return newIntegerLazyIterator(input, ics, opt), nil
+		case StringIterator:
+			return newStringLazyIterator(input, ics, opt), nil
+		case BooleanIterator:
+			return newBooleanLazyIterator(input, ics, opt), nil
+		default:
+			panic(fmt.Sprintf("unsupported lazy iterator type: %T", input))
+		}
+	}
+}
+
 // NewFillIterator returns an iterator that fills in missing points in an aggregate.
 func NewFillIterator(input Iterator, expr Expr, opt IteratorOptions) Iterator {
 	switch input := input.(type) {
