@@ -1105,6 +1105,24 @@ func (e *Engine) KeyCursor(key string, t int64, ascending bool) *KeyCursor {
 	return e.FileStore.KeyCursor(key, t, ascending)
 }
 
+func (e *Engine) TagSets(measurement string, opt influxql.IteratorOptions) ([]*influxql.TagSets, error) {
+	// Retrieve the measurement from the index.
+	mm := e.index.Measurement(measurement)
+	if mm == nil {
+		return nil, nil
+	}
+
+	// Determine tagsets for this measurement based on dimensions and filters.
+	tagSets, err := mm.TagSets(opt.Dimensions, opt.Condition)
+	if err != nil {
+		return nil, err
+	}
+
+	// Calculate tag sets and apply SLIMIT/SOFFSET.
+	tagSets = influxql.LimitTagSets(tagSets, opt.SLimit, opt.SOffset)
+	return tagSets, nil
+}
+
 func (e *Engine) CreateIterator(opt influxql.IteratorOptions) (influxql.Iterator, error) {
 	if call, ok := opt.Expr.(*influxql.Call); ok {
 		refOpt := opt
