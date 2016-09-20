@@ -577,6 +577,7 @@ func new{{$k.Name}}LazyIterator(input {{$k.Name}}Iterator, ics IteratorCreators,
 	}
 }
 
+// Next
 func (itr *{{$k.name}}LazyIterator) Next() (*{{$k.Name}}Point, error) {
 	for {
 		input := itr.input
@@ -615,6 +616,11 @@ func (itr *{{$k.name}}LazyIterator) Close() (err error) {
 	return err
 }
 
+// advance creates the next Iterator from the list of IteratorCreators.
+// It continues to try creating an iterator until it gets a non-nil iterator
+// of the correct type or until there are no more IteratorCreators left.
+// If a new Iterator was created, this returns true. If an error happened while
+// creating any Iterator, false and the error are returned.
 func (itr *{{$k.name}}LazyIterator) advance() (bool, error) {
 	itr.mu.Lock()
 	defer itr.mu.Unlock()

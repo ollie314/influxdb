@@ -579,6 +579,7 @@ func newFloatLazyIterator(input FloatIterator, ics IteratorCreators, opt Iterato
 	}
 }
 
+// Next
 func (itr *floatLazyIterator) Next() (*FloatPoint, error) {
 	for {
 		input := itr.input
@@ -617,6 +618,11 @@ func (itr *floatLazyIterator) Close() (err error) {
 	return err
 }
 
+// advance creates the next Iterator from the list of IteratorCreators.
+// It continues to try creating an iterator until it gets a non-nil iterator
+// of the correct type or until there are no more IteratorCreators left.
+// If a new Iterator was created, this returns true. If an error happened while
+// creating any Iterator, false and the error are returned.
 func (itr *floatLazyIterator) advance() (bool, error) {
 	itr.mu.Lock()
 	defer itr.mu.Unlock()
@@ -2734,6 +2740,7 @@ func newIntegerLazyIterator(input IntegerIterator, ics IteratorCreators, opt Ite
 	}
 }
 
+// Next
 func (itr *integerLazyIterator) Next() (*IntegerPoint, error) {
 	for {
 		input := itr.input
@@ -2772,6 +2779,11 @@ func (itr *integerLazyIterator) Close() (err error) {
 	return err
 }
 
+// advance creates the next Iterator from the list of IteratorCreators.
+// It continues to try creating an iterator until it gets a non-nil iterator
+// of the correct type or until there are no more IteratorCreators left.
+// If a new Iterator was created, this returns true. If an error happened while
+// creating any Iterator, false and the error are returned.
 func (itr *integerLazyIterator) advance() (bool, error) {
 	itr.mu.Lock()
 	defer itr.mu.Unlock()
@@ -4886,6 +4898,7 @@ func newStringLazyIterator(input StringIterator, ics IteratorCreators, opt Itera
 	}
 }
 
+// Next
 func (itr *stringLazyIterator) Next() (*StringPoint, error) {
 	for {
 		input := itr.input
@@ -4924,6 +4937,11 @@ func (itr *stringLazyIterator) Close() (err error) {
 	return err
 }
 
+// advance creates the next Iterator from the list of IteratorCreators.
+// It continues to try creating an iterator until it gets a non-nil iterator
+// of the correct type or until there are no more IteratorCreators left.
+// If a new Iterator was created, this returns true. If an error happened while
+// creating any Iterator, false and the error are returned.
 func (itr *stringLazyIterator) advance() (bool, error) {
 	itr.mu.Lock()
 	defer itr.mu.Unlock()
@@ -7038,6 +7056,7 @@ func newBooleanLazyIterator(input BooleanIterator, ics IteratorCreators, opt Ite
 	}
 }
 
+// Next
 func (itr *booleanLazyIterator) Next() (*BooleanPoint, error) {
 	for {
 		input := itr.input
@@ -7076,6 +7095,11 @@ func (itr *booleanLazyIterator) Close() (err error) {
 	return err
 }
 
+// advance creates the next Iterator from the list of IteratorCreators.
+// It continues to try creating an iterator until it gets a non-nil iterator
+// of the correct type or until there are no more IteratorCreators left.
+// If a new Iterator was created, this returns true. If an error happened while
+// creating any Iterator, false and the error are returned.
 func (itr *booleanLazyIterator) advance() (bool, error) {
 	itr.mu.Lock()
 	defer itr.mu.Unlock()
