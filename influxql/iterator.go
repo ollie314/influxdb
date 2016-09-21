@@ -731,6 +731,31 @@ func (a IteratorCreators) ExpandSources(sources Sources) (Sources, error) {
 	return sorted, nil
 }
 
+// LazyIteratorCreator creates a LazyIterator from the IteratorCreators.
+type LazyIteratorCreator []IteratorCreator
+
+// Close closes all iterator creators that implement io.Closer.
+func (a LazyIteratorCreator) Close() error {
+	return IteratorCreators(a).Close()
+}
+
+// CreateIterator returns a single combined iterator from multiple iterator
+// creators wrapped in a LazyIterator. See LazyIterator for information about
+// how the LazyIterator works.
+func (a LazyIteratorCreator) CreateIterator(opt IteratorOptions) (Iterator, error) {
+	return NewLazyIterator(IteratorCreators(a), opt)
+}
+
+// FieldDimensions returns unique fields and dimensions from multiple iterator creators.
+func (a LazyIteratorCreator) FieldDimensions(sources Sources) (map[string]DataType, map[string]struct{}, error) {
+	return IteratorCreators(a).FieldDimensions(sources)
+}
+
+// ExpandSources expands sources across all iterator creators and returns a unique result.
+func (a LazyIteratorCreator) ExpandSources(sources Sources) (Sources, error) {
+	return IteratorCreators(a).ExpandSources(sources)
+}
+
 // IteratorOptions is an object passed to CreateIterator to specify creation options.
 type IteratorOptions struct {
 	// Expression to iterate for.
