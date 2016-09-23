@@ -2116,20 +2116,6 @@ func filterExprBySource(name string, expr Expr) Expr {
 	return expr
 }
 
-// MatchSource returns the source name that matches a field name.
-// Returns a blank string if no sources match.
-func MatchSource(sources Sources, name string) string {
-	for _, src := range sources {
-		switch src := src.(type) {
-		case *Measurement:
-			if strings.HasPrefix(name, src.Name) {
-				return src.Name
-			}
-		}
-	}
-	return ""
-}
-
 // Target represents a target (destination) policy, measurement, and DB.
 type Target struct {
 	// Measurement to write into.
