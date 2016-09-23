@@ -661,17 +661,10 @@ func (s *Shard) ExpandSources(sources influxql.Sources) (influxql.Sources, error
 		}
 	}
 
-	// Convert set to sorted slice.
-	names := make([]string, 0, len(set))
-	for name := range set {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
 	// Convert set to a list of Sources.
 	expanded := make(influxql.Sources, 0, len(set))
-	for _, name := range names {
-		expanded = append(expanded, set[name])
+	for _, s := range set {
+		expanded = append(expanded, s)
 	}
 
 	return expanded, nil

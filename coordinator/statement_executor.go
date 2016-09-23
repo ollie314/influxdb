@@ -542,8 +542,8 @@ func (e *StatementExecutor) createIterators(stmt *influxql.SelectStatement, ctx 
 	// Remove "time" from fields list.
 	stmt.RewriteTimeFields()
 
-	// Create an iterator creator based on the shards in the cluster.
-	ic, err := e.iteratorCreator(stmt, &opt)
+	// Create a shard mapping based on the shards in the cluster.
+	ic, err := e.mapShards(stmt.Sources, &opt)
 	if err != nil {
 		return nil, stmt, err
 	}
@@ -596,14 +596,40 @@ func (e *StatementExecutor) createIterators(stmt *influxql.SelectStatement, ctx 
 	return itrs, stmt, nil
 }
 
-// iteratorCreator returns a new instance of IteratorCreator based on stmt.
-func (e *StatementExecutor) iteratorCreator(stmt *influxql.SelectStatement, opt *influxql.SelectOptions) (influxql.IteratorCreator, error) {
-	// Retrieve a list of shard IDs.
-	shards, err := e.MetaClient.ShardsByTimeRange(stmt.Sources, opt.MinTime, opt.MaxTime)
-	if err != nil {
-		return nil, err
+func (e *StatementExecutor) mapShards(sources influxql.Sources, opt *influxql.SelectOptions) (ShardGroupMapping, error) {
+	m := make(ShardGroupMapping)
+	for _, s := range sources {
+		switch s := s.(type) {
+		case *influxql.Measurement:
+			key := fmt.Sprintf("%s.%s",
+				influxql.QuoteIdent(s.Database),
+				influxql.QuoteIdent(s.RetentionPolicy))
+			if _, ok := m[key]; ok {
+				continue
+			}
+
+			groups, err := e.MetaClient.ShardGroupsByTimeRange(s.Database, s.RetentionPolicy, opt.MinTime, opt.MaxTime)
+			if err != nil {
+				return nil, err
+			}
+
+			shardGroups := make([]*ShardGroup, 0, len(groups))
+			for _, g := range groups {
+				shardIDs := make([]uint64, len(g.Shards))
+				for i, s := range g.Shards {
+					shardIDs[i] = s.ID
+				}
+
+				sg := &ShardGroup{
+					Shards:    e.TSDBStore.Shards(shardIDs),
+					StartTime: g.StartTime,
+				}
+				shardGroups = append(shardGroups, sg)
+			}
+			m[key] = shardGroups
+		}
 	}
-	return e.TSDBStore.IteratorCreator(shards, opt)
+	return m, nil
 }
 
 func (e *StatementExecutor) executeShowContinuousQueriesStatement(stmt *influxql.ShowContinuousQueriesStatement) (models.Rows, error) {
@@ -1143,6 +1169,7 @@ type TSDBStore interface {
 	DeleteShard(id uint64) error
 	IteratorCreator(shards []meta.ShardInfo, opt *influxql.SelectOptions) (influxql.IteratorCreator, error)
 
+	Shards(shards []uint64) []*tsdb.Shard
 	Measurements(database string, cond influxql.Expr) ([]string, error)
 	TagValues(database string, cond influxql.Expr) ([]tsdb.TagValues, error)
 }

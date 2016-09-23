@@ -1105,7 +1105,7 @@ func (e *Engine) KeyCursor(key string, t int64, ascending bool) *KeyCursor {
 	return e.FileStore.KeyCursor(key, t, ascending)
 }
 
-func (e *Engine) TagSets(measurement string, opt influxql.IteratorOptions) ([]*influxql.TagSets, error) {
+func (e *Engine) TagSets(measurement string, opt influxql.IteratorOptions) ([]*influxql.TagSet, error) {
 	// Retrieve the measurement from the index.
 	mm := e.index.Measurement(measurement)
 	if mm == nil {
