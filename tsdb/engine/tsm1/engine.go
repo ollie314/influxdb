@@ -1105,22 +1105,8 @@ func (e *Engine) KeyCursor(key string, t int64, ascending bool) *KeyCursor {
 	return e.FileStore.KeyCursor(key, t, ascending)
 }
 
-func (e *Engine) TagSets(measurement string, opt influxql.IteratorOptions) ([]*influxql.TagSet, error) {
-	// Retrieve the measurement from the index.
-	mm := e.index.Measurement(measurement)
-	if mm == nil {
-		return nil, nil
-	}
-
-	// Determine tagsets for this measurement based on dimensions and filters.
-	tagSets, err := mm.TagSets(opt.Dimensions, opt.Condition)
-	if err != nil {
-		return nil, err
-	}
-
-	// Calculate tag sets and apply SLIMIT/SOFFSET.
-	tagSets = influxql.LimitTagSets(tagSets, opt.SLimit, opt.SOffset)
-	return tagSets, nil
+func (e *Engine) MeasurementByName(name string) *tsdb.Measurement {
+	return e.index.Measurement(name)
 }
 
 func (e *Engine) CreateIterator(opt influxql.IteratorOptions) (influxql.Iterator, error) {
@@ -1158,6 +1144,53 @@ func (e *Engine) CreateIterator(opt influxql.IteratorOptions) (influxql.Iterator
 	itr := influxql.NewSortedMergeIterator(itrs, opt)
 	if itr != nil && opt.InterruptCh != nil {
 		itr = influxql.NewInterruptIterator(itr, opt.InterruptCh)
+	}
+	return itr, nil
+}
+
+func (e *Engine) CreateSeriesIterator(mm *tsdb.Measurement, t *influxql.TagSet, opt influxql.IteratorOptions) (influxql.Iterator, error) {
+	/*
+		if call, ok := opt.Expr.(*influxql.Call); ok {
+			return nil, nil
+				refOpt := opt
+				refOpt.Expr = call.Args[0].(*influxql.VarRef)
+				inputs, err := e.createVarRefIterator(refOpt, true)
+				if err != nil {
+					return nil, err
+				} else if len(inputs) == 0 {
+					return nil, nil
+				}
+
+				// Wrap each series in a call iterator.
+				for i, input := range inputs {
+					if opt.InterruptCh != nil {
+						input = influxql.NewInterruptIterator(input, opt.InterruptCh)
+					}
+
+					itr, err := influxql.NewCallIterator(input, opt)
+					if err != nil {
+						return nil, err
+					}
+					inputs[i] = itr
+				}
+
+				return influxql.NewParallelMergeIterator(inputs, opt, runtime.GOMAXPROCS(0)), nil
+		}
+	*/
+
+	ref, _ := opt.Expr.(*influxql.VarRef)
+	itrs, err := e.createTagSetIterators(ref, mm, t, opt)
+	if err != nil {
+		return nil, err
+	}
+
+	itr := influxql.NewSortedMergeIterator(itrs, opt)
+	if itr != nil && opt.InterruptCh != nil {
+		itr = influxql.NewInterruptIterator(itr, opt.InterruptCh)
+	}
+
+	if opt.Limit > 0 || opt.Offset > 0 {
+		itr = newLimitIterator(itr, opt)
 	}
 	return itr, nil
 }

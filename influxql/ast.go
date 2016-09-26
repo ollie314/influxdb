@@ -1047,9 +1047,9 @@ func cloneSource(s Source) Source {
 // fields are replaced with the supplied fields, and any wildcard GROUP BY fields are replaced
 // with the supplied dimensions. Any fields with no type specifier are rewritten with the
 // appropriate type.
-func (s *SelectStatement) RewriteFields(ic IteratorCreator) (*SelectStatement, error) {
+func (s *SelectStatement) RewriteFields(mapper FieldMapper) (*SelectStatement, error) {
 	// Retrieve a list of unique field and dimensions.
-	fieldSet, dimensionSet, err := ic.FieldDimensions(s.Sources)
+	fieldSet, dimensionSet, err := mapper.FieldDimensions()
 	if err != nil {
 		return s, err
 	}
@@ -3078,6 +3078,14 @@ func (m *Measurement) String() string {
 	}
 
 	return buf.String()
+}
+
+// DatabaseString returns a string representation of only the database.
+func (m *Measurement) DatabaseString() string {
+	return strings.Join([]string{
+		QuoteIdent(m.Database),
+		QuoteIdent(m.RetentionPolicy),
+	}, ".")
 }
 
 func encodeMeasurement(mm *Measurement) *internal.Measurement {

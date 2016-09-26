@@ -543,18 +543,9 @@ func (e *StatementExecutor) createIterators(stmt *influxql.SelectStatement, ctx 
 	stmt.RewriteTimeFields()
 
 	// Create a shard mapping based on the shards in the cluster.
-	ic, err := e.mapShards(stmt.Sources, &opt)
+	ic, err := e.mapShards(stmt, &opt)
 	if err != nil {
 		return nil, stmt, err
-	}
-
-	// Expand regex sources to their actual source names.
-	if stmt.Sources.HasRegex() {
-		sources, err := ic.ExpandSources(stmt.Sources)
-		if err != nil {
-			return nil, stmt, err
-		}
-		stmt.Sources = sources
 	}
 
 	// Rewrite wildcards, if any exist.
@@ -596,40 +587,44 @@ func (e *StatementExecutor) createIterators(stmt *influxql.SelectStatement, ctx 
 	return itrs, stmt, nil
 }
 
-func (e *StatementExecutor) mapShards(sources influxql.Sources, opt *influxql.SelectOptions) (ShardGroupMapping, error) {
-	m := make(ShardGroupMapping)
-	for _, s := range sources {
+func (e *StatementExecutor) mapShards(stmt *influxql.SelectStatement, opt *influxql.SelectOptions) (ShardMapper, error) {
+	var a ShardMapper
+	for _, s := range stmt.Sources {
 		switch s := s.(type) {
 		case *influxql.Measurement:
-			key := fmt.Sprintf("%s.%s",
-				influxql.QuoteIdent(s.Database),
-				influxql.QuoteIdent(s.RetentionPolicy))
-			if _, ok := m[key]; ok {
-				continue
-			}
-
 			groups, err := e.MetaClient.ShardGroupsByTimeRange(s.Database, s.RetentionPolicy, opt.MinTime, opt.MaxTime)
 			if err != nil {
 				return nil, err
 			}
 
-			shardGroups := make([]*ShardGroup, 0, len(groups))
 			for _, g := range groups {
-				shardIDs := make([]uint64, len(g.Shards))
-				for i, s := range g.Shards {
-					shardIDs[i] = s.ID
-				}
+				for _, si := range g.Shards {
+					shard := e.TSDBStore.Shard(si.ID)
+					if shard == nil {
+						continue
+					}
 
-				sg := &ShardGroup{
-					Shards:    e.TSDBStore.Shards(shardIDs),
-					StartTime: g.StartTime,
+					var measurements []string
+					if s.Regex != nil {
+						mms := shard.MeasurementsByRegex(s.Regex.Val)
+						measurements = make([]string, 0, len(mms))
+						for _, m := range mms {
+							measurements = append(measurements, m.Name)
+						}
+					} else {
+						measurements = []string{s.Name}
+					}
+
+					a = append(a, &ShardInfo{
+						Shard:        shard,
+						Measurements: measurements,
+						StartTime:    g.StartTime,
+					})
 				}
-				shardGroups = append(shardGroups, sg)
 			}
-			m[key] = shardGroups
 		}
 	}
-	return m, nil
+	return a, nil
 }
 
 func (e *StatementExecutor) executeShowContinuousQueriesStatement(stmt *influxql.ShowContinuousQueriesStatement) (models.Rows, error) {
@@ -1169,7 +1164,7 @@ type TSDBStore interface {
 	DeleteShard(id uint64) error
 	IteratorCreator(shards []meta.ShardInfo, opt *influxql.SelectOptions) (influxql.IteratorCreator, error)
 
-	Shards(shards []uint64) []*tsdb.Shard
+	Shard(id uint64) *tsdb.Shard
 	Measurements(database string, cond influxql.Expr) ([]string, error)
 	TagValues(database string, cond influxql.Expr) ([]tsdb.TagValues, error)
 }

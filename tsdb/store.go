@@ -766,7 +766,7 @@ func (s *Store) deleteSeries(database string, seriesKeys []string, min, max int6
 
 // ExpandSources expands sources against all local shards.
 func (s *Store) ExpandSources(sources influxql.Sources) (influxql.Sources, error) {
-	return s.IteratorCreators().ExpandSources(sources)
+	return sources, nil
 }
 
 // IteratorCreators returns a set of all local shards as iterator creators.

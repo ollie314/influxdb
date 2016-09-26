@@ -640,6 +640,10 @@ func (itr *{{$k.name}}LazyIterator) advance() (bool, error) {
 		}
 		itr.ics = itr.ics[1:]
 
+		if input == nil {
+			continue
+		}
+
 		var ok bool
 		itr.input, ok = input.({{$k.Name}}Iterator)
 		if !ok {

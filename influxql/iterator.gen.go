@@ -642,6 +642,10 @@ func (itr *floatLazyIterator) advance() (bool, error) {
 		}
 		itr.ics = itr.ics[1:]
 
+		if input == nil {
+			continue
+		}
+
 		var ok bool
 		itr.input, ok = input.(FloatIterator)
 		if !ok {
@@ -2803,6 +2807,10 @@ func (itr *integerLazyIterator) advance() (bool, error) {
 		}
 		itr.ics = itr.ics[1:]
 
+		if input == nil {
+			continue
+		}
+
 		var ok bool
 		itr.input, ok = input.(IntegerIterator)
 		if !ok {
@@ -4961,6 +4969,10 @@ func (itr *stringLazyIterator) advance() (bool, error) {
 		}
 		itr.ics = itr.ics[1:]
 
+		if input == nil {
+			continue
+		}
+
 		var ok bool
 		itr.input, ok = input.(StringIterator)
 		if !ok {
@@ -7118,6 +7130,10 @@ func (itr *booleanLazyIterator) advance() (bool, error) {
 			return false, err
 		}
 		itr.ics = itr.ics[1:]
+
+		if input == nil {
+			continue
+		}
 
 		var ok bool
 		itr.input, ok = input.(BooleanIterator)

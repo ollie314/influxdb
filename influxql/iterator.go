@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"sort"
 	"sync"
 	"time"
 
@@ -624,7 +623,14 @@ func NewReaderIterator(r io.Reader, typ DataType, stats IteratorStats) Iterator 
 type IteratorCreator interface {
 	// Creates a simple iterator for use in an InfluxQL query.
 	CreateIterator(opt IteratorOptions) (Iterator, error)
+}
 
+// FieldMapper returns a mapping of fields and dimensions for the shards.
+type FieldMapper interface {
+	FieldDimensions() (fields map[string]DataType, dimensions map[string]struct{}, err error)
+}
+
+type QueryPlanner interface {
 	// Returns the unique fields and dimensions across a list of sources.
 	FieldDimensions(sources Sources) (fields map[string]DataType, dimensions map[string]struct{}, err error)
 
@@ -673,64 +679,6 @@ func (a IteratorCreators) CreateIterator(opt IteratorOptions) (Iterator, error) 
 	return Iterators(itrs).Merge(opt)
 }
 
-// FieldDimensions returns unique fields and dimensions from multiple iterator creators.
-func (a IteratorCreators) FieldDimensions(sources Sources) (fields map[string]DataType, dimensions map[string]struct{}, err error) {
-	fields = make(map[string]DataType)
-	dimensions = make(map[string]struct{})
-
-	for _, ic := range a {
-		f, d, err := ic.FieldDimensions(sources)
-		if err != nil {
-			return nil, nil, err
-		}
-		for k, typ := range f {
-			if _, ok := fields[k]; typ != Unknown && (!ok || typ < fields[k]) {
-				fields[k] = typ
-			}
-		}
-		for k := range d {
-			dimensions[k] = struct{}{}
-		}
-	}
-	return
-}
-
-// ExpandSources expands sources across all iterator creators and returns a unique result.
-func (a IteratorCreators) ExpandSources(sources Sources) (Sources, error) {
-	m := make(map[string]Source)
-
-	for _, ic := range a {
-		expanded, err := ic.ExpandSources(sources)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, src := range expanded {
-			switch src := src.(type) {
-			case *Measurement:
-				m[src.String()] = src
-			default:
-				return nil, fmt.Errorf("IteratorCreators.ExpandSources: unsupported source type: %T", src)
-			}
-		}
-	}
-
-	// Convert set to sorted slice.
-	names := make([]string, 0, len(m))
-	for name := range m {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
-	// Convert set to a list of Sources.
-	sorted := make(Sources, 0, len(m))
-	for _, name := range names {
-		sorted = append(sorted, m[name])
-	}
-
-	return sorted, nil
-}
-
 // LazyIteratorCreator creates a LazyIterator from the IteratorCreators.
 type LazyIteratorCreator []IteratorCreator
 
@@ -744,16 +692,6 @@ func (a LazyIteratorCreator) Close() error {
 // how the LazyIterator works.
 func (a LazyIteratorCreator) CreateIterator(opt IteratorOptions) (Iterator, error) {
 	return NewLazyIterator(IteratorCreators(a), opt)
-}
-
-// FieldDimensions returns unique fields and dimensions from multiple iterator creators.
-func (a LazyIteratorCreator) FieldDimensions(sources Sources) (map[string]DataType, map[string]struct{}, error) {
-	return IteratorCreators(a).FieldDimensions(sources)
-}
-
-// ExpandSources expands sources across all iterator creators and returns a unique result.
-func (a LazyIteratorCreator) ExpandSources(sources Sources) (Sources, error) {
-	return IteratorCreators(a).ExpandSources(sources)
 }
 
 // IteratorOptions is an object passed to CreateIterator to specify creation options.
