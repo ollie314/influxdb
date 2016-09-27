@@ -427,7 +427,7 @@ func (e *StatementExecutor) executeSelectStatement(stmt *influxql.SelectStatemen
 	}
 
 	for {
-		row, err := em.Emit()
+		row, partial, err := em.Emit()
 		if err != nil {
 			return err
 		} else if row == nil {
@@ -452,6 +452,7 @@ func (e *StatementExecutor) executeSelectStatement(stmt *influxql.SelectStatemen
 		result := &influxql.Result{
 			StatementID: ctx.StatementID,
 			Series:      []*models.Row{row},
+			Partial:     partial,
 		}
 
 		// Send results or exit if closing.

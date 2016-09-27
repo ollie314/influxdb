@@ -544,6 +544,7 @@ func (h *Handler) serveQuery(w http.ResponseWriter, r *http.Request, user *meta.
 			r.Series = r.Series[rowsMerged:]
 			cr.Series = append(cr.Series, r.Series...)
 			cr.Messages = append(cr.Messages, r.Messages...)
+			cr.Partial = r.Partial
 		} else {
 			resp.Results = append(resp.Results, r)
 		}
