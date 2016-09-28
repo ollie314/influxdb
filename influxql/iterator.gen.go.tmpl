@@ -673,6 +673,23 @@ func (itr *{{$k.name}}FillIterator) Next() (*{{$k.Name}}Point, error) {
 		switch itr.opt.Fill {
 		case NullFill:
 			p.Nil = true
+		case AverageFill:
+			if !itr.prev.Nil {
+				next, err := itr.input.peek()
+				if err != nil {
+					return nil, err
+				}
+				if next != nil {
+					interval := int64(itr.opt.Interval.Duration)
+					start := itr.window.time / interval
+					p.Value = average{{$k.Name}}(start, itr.prev.Time/interval, next.Time/interval, itr.prev.Value, next.Value)
+				} else {
+					p.Nil = true
+				}
+				itr.prev = *p
+			} else {
+				p.Nil = true
+			}
 		case NumberFill:
 			p.Value = castTo{{$k.Name}}(itr.opt.FillValue)
 		case PreviousFill:

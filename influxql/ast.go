@@ -893,6 +893,8 @@ const (
 	NumberFill
 	// PreviousFill means that empty aggregate windows will be filled with whatever the previous aggregate window had
 	PreviousFill
+	// AverageFill means that empty aggregate windows will be filled with whatever the average between non null windows
+	AverageFill
 )
 
 // SelectStatement represents a command for extracting data from the database.
@@ -1357,6 +1359,8 @@ func (s *SelectStatement) String() string {
 		_, _ = buf.WriteString(" fill(none)")
 	case NumberFill:
 		_, _ = buf.WriteString(fmt.Sprintf(" fill(%v)", s.FillValue))
+	case AverageFill:
+		_, _ = buf.WriteString(" fill(average)")
 	case PreviousFill:
 		_, _ = buf.WriteString(" fill(previous)")
 	}

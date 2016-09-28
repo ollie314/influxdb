@@ -675,6 +675,23 @@ func (itr *floatFillIterator) Next() (*FloatPoint, error) {
 		switch itr.opt.Fill {
 		case NullFill:
 			p.Nil = true
+		case AverageFill:
+			if !itr.prev.Nil {
+				next, err := itr.input.peek()
+				if err != nil {
+					return nil, err
+				}
+				if next != nil {
+					interval := int64(itr.opt.Interval.Duration)
+					start := itr.window.time / interval
+					p.Value = averageFloat(start, itr.prev.Time/interval, next.Time/interval, itr.prev.Value, next.Value)
+				} else {
+					p.Nil = true
+				}
+				itr.prev = *p
+			} else {
+				p.Nil = true
+			}
 		case NumberFill:
 			p.Value = castToFloat(itr.opt.FillValue)
 		case PreviousFill:
@@ -2744,6 +2761,23 @@ func (itr *integerFillIterator) Next() (*IntegerPoint, error) {
 		switch itr.opt.Fill {
 		case NullFill:
 			p.Nil = true
+		case AverageFill:
+			if !itr.prev.Nil {
+				next, err := itr.input.peek()
+				if err != nil {
+					return nil, err
+				}
+				if next != nil {
+					interval := int64(itr.opt.Interval.Duration)
+					start := itr.window.time / interval
+					p.Value = averageInteger(start, itr.prev.Time/interval, next.Time/interval, itr.prev.Value, next.Value)
+				} else {
+					p.Nil = true
+				}
+				itr.prev = *p
+			} else {
+				p.Nil = true
+			}
 		case NumberFill:
 			p.Value = castToInteger(itr.opt.FillValue)
 		case PreviousFill:
@@ -4810,6 +4844,23 @@ func (itr *stringFillIterator) Next() (*StringPoint, error) {
 		switch itr.opt.Fill {
 		case NullFill:
 			p.Nil = true
+		case AverageFill:
+			if !itr.prev.Nil {
+				next, err := itr.input.peek()
+				if err != nil {
+					return nil, err
+				}
+				if next != nil {
+					interval := int64(itr.opt.Interval.Duration)
+					start := itr.window.time / interval
+					p.Value = averageString(start, itr.prev.Time/interval, next.Time/interval, itr.prev.Value, next.Value)
+				} else {
+					p.Nil = true
+				}
+				itr.prev = *p
+			} else {
+				p.Nil = true
+			}
 		case NumberFill:
 			p.Value = castToString(itr.opt.FillValue)
 		case PreviousFill:
@@ -6876,6 +6927,23 @@ func (itr *booleanFillIterator) Next() (*BooleanPoint, error) {
 		switch itr.opt.Fill {
 		case NullFill:
 			p.Nil = true
+		case AverageFill:
+			if !itr.prev.Nil {
+				next, err := itr.input.peek()
+				if err != nil {
+					return nil, err
+				}
+				if next != nil {
+					interval := int64(itr.opt.Interval.Duration)
+					start := itr.window.time / interval
+					p.Value = averageBoolean(start, itr.prev.Time/interval, next.Time/interval, itr.prev.Value, next.Value)
+				} else {
+					p.Nil = true
+				}
+				itr.prev = *p
+			} else {
+				p.Nil = true
+			}
 		case NumberFill:
 			p.Value = castToBoolean(itr.opt.FillValue)
 		case PreviousFill:
