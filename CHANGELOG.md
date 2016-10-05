@@ -4,6 +4,7 @@
 
 ### Features
 
+- [#7403](https://github.com/influxdata/influxdb/pull/7403): Add `fill(linear)` to query language
 - [#7120](https://github.com/influxdata/influxdb/issues/7120): Add additional statistics to query executor.
 - [#7135](https://github.com/influxdata/influxdb/pull/7135): Support enable HTTP service over unix domain socket. Thanks @oiooj
 - [#3634](https://github.com/influxdata/influxdb/issues/3634): Support mixed duration units.
@@ -17,6 +18,7 @@
 
 ### Bugfixes
 
+- [#7392](https://github.com/influxdata/influxdb/pull/7392): Enable https subscriptions to work with custom CA certificates.
 - [#1834](https://github.com/influxdata/influxdb/issues/1834): Drop time when used as a tag or field key.
 - [#7152](https://github.com/influxdata/influxdb/issues/7152): Decrement number of measurements only once when deleting the last series from a measurement.
 - [#7177](https://github.com/influxdata/influxdb/issues/7177): Fix base64 encoding issue with /debug/vars stats.
@@ -28,6 +30,13 @@
 - [#2792](https://github.com/influxdata/influxdb/issues/2792): Exceeding max retention policy duration gives incorrect error message
 - [#7226](https://github.com/influxdata/influxdb/issues/7226): Fix database locked up when deleting shards
 - [#7382](https://github.com/influxdata/influxdb/issues/7382): Shard stats include wal path tag so disk bytes make more sense.
+- [#7385](https://github.com/influxdata/influxdb/pull/7385): Reduce query planning allocations
+
+## v1.0.2 [unreleased]
+
+### Bugfixes
+
+- [#7391](https://github.com/influxdata/influxdb/issues/7391): Fix RLE integer decoding producing negative numbers
 
 ## v1.0.1 [2016-09-26]
 

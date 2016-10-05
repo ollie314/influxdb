@@ -892,6 +892,8 @@ const (
 	NumberFill
 	// PreviousFill means that empty aggregate windows will be filled with whatever the previous aggregate window had
 	PreviousFill
+	// LinearFill means that empty aggregate windows will be filled with whatever a linear value between non null windows
+	LinearFill
 )
 
 // SelectStatement represents a command for extracting data from the database.
@@ -1356,6 +1358,8 @@ func (s *SelectStatement) String() string {
 		_, _ = buf.WriteString(" fill(none)")
 	case NumberFill:
 		_, _ = buf.WriteString(fmt.Sprintf(" fill(%v)", s.FillValue))
+	case LinearFill:
+		_, _ = buf.WriteString(" fill(linear)")
 	case PreviousFill:
 		_, _ = buf.WriteString(" fill(previous)")
 	}
@@ -2001,7 +2005,7 @@ func walkRefs(exp Expr) []VarRef {
 	case *VarRef:
 		return []VarRef{*expr}
 	case *Call:
-		var a []VarRef
+		a := make([]VarRef, 0, len(expr.Args))
 		for _, expr := range expr.Args {
 			if ref, ok := expr.(*VarRef); ok {
 				a = append(a, *ref)
@@ -2009,9 +2013,11 @@ func walkRefs(exp Expr) []VarRef {
 		}
 		return a
 	case *BinaryExpr:
-		var ret []VarRef
-		ret = append(ret, walkRefs(expr.LHS)...)
-		ret = append(ret, walkRefs(expr.RHS)...)
+		lhs := walkRefs(expr.LHS)
+		rhs := walkRefs(expr.RHS)
+		ret := make([]VarRef, 0, len(lhs)+len(rhs))
+		ret = append(ret, lhs...)
+		ret = append(ret, rhs...)
 		return ret
 	case *ParenExpr:
 		return walkRefs(expr.Expr)
