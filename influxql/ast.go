@@ -1128,6 +1128,12 @@ func (s *SelectStatement) RewriteFields(ic IteratorCreator) (*SelectStatement, e
 					}
 					rwFields = append(rwFields, &Field{Expr: &VarRef{Val: ref.Val, Type: ref.Type}})
 				}
+			case *RegexLiteral:
+				for _, ref := range fields {
+					if expr.Val.MatchString(ref.Val) {
+						rwFields = append(rwFields, &Field{Expr: &VarRef{Val: ref.Val, Type: ref.Type}})
+					}
+				}
 			case *Call:
 				// Clone a template that we can modify and use for new fields.
 				template := CloneExpr(expr).(*Call)
@@ -1149,10 +1155,16 @@ func (s *SelectStatement) RewriteFields(ic IteratorCreator) (*SelectStatement, e
 					continue
 				}
 
-				wc, ok := call.Args[0].(*Wildcard)
-				if ok && wc.Type == TAG {
-					return s, fmt.Errorf("unable to use tag wildcard in %s()", call.Name)
-				} else if !ok {
+				// Retrieve if this is a wildcard or a regular expression.
+				var re *regexp.Regexp
+				switch expr := call.Args[0].(type) {
+				case *Wildcard:
+					if expr.Type == TAG {
+						return s, fmt.Errorf("unable to use tag wildcard in %s()", call.Name)
+					}
+				case *RegexLiteral:
+					re = expr.Val
+				default:
 					rwFields = append(rwFields, f)
 					continue
 				}
@@ -1167,9 +1179,7 @@ func (s *SelectStatement) RewriteFields(ic IteratorCreator) (*SelectStatement, e
 				switch call.Name {
 				case "count", "first", "last", "distinct", "elapsed", "mode":
 					supportedTypes[String] = struct{}{}
-					supportedTypes[Boolean] = struct{}{}
-				case "stddev":
-					supportedTypes[String] = struct{}{}
+					fallthrough
 				case "min", "max":
 					supportedTypes[Boolean] = struct{}{}
 				}
@@ -1180,6 +1190,8 @@ func (s *SelectStatement) RewriteFields(ic IteratorCreator) (*SelectStatement, e
 					if ref.Type == Tag {
 						continue
 					} else if _, ok := supportedTypes[ref.Type]; !ok {
+						continue
+					} else if re != nil && !re.MatchString(ref.Val) {
 						continue
 					}
 
@@ -1202,10 +1214,16 @@ func (s *SelectStatement) RewriteFields(ic IteratorCreator) (*SelectStatement, e
 		// Allocate a slice assuming there is exactly one wildcard for efficiency.
 		rwDimensions := make(Dimensions, 0, len(s.Dimensions)+len(dimensions)-1)
 		for _, d := range s.Dimensions {
-			switch d.Expr.(type) {
+			switch expr := d.Expr.(type) {
 			case *Wildcard:
 				for _, name := range dimensions {
 					rwDimensions = append(rwDimensions, &Dimension{Expr: &VarRef{Val: name}})
+				}
+			case *RegexLiteral:
+				for _, name := range dimensions {
+					if expr.Val.MatchString(name) {
+						rwDimensions = append(rwDimensions, &Dimension{Expr: &VarRef{Val: name}})
+					}
 				}
 			default:
 				rwDimensions = append(rwDimensions, d)
@@ -1420,8 +1438,8 @@ func (s *SelectStatement) HasFieldWildcard() (hasWildcard bool) {
 		if hasWildcard {
 			return
 		}
-		_, ok := n.(*Wildcard)
-		if ok {
+		switch n.(type) {
+		case *Wildcard, *RegexLiteral:
 			hasWildcard = true
 		}
 	})
@@ -1432,8 +1450,8 @@ func (s *SelectStatement) HasFieldWildcard() (hasWildcard bool) {
 // at least 1 wildcard in the dimensions aka `GROUP BY`
 func (s *SelectStatement) HasDimensionWildcard() bool {
 	for _, d := range s.Dimensions {
-		_, ok := d.Expr.(*Wildcard)
-		if ok {
+		switch d.Expr.(type) {
+		case *Wildcard, *RegexLiteral:
 			return true
 		}
 	}
@@ -1515,6 +1533,7 @@ func (s *SelectStatement) validateDimensions() error {
 				return errors.New("time() is a function and expects at least one argument")
 			}
 		case *Wildcard:
+		case *RegexLiteral:
 		default:
 			return errors.New("only time and tag dimensions allowed")
 		}
@@ -1601,7 +1620,7 @@ func (s *SelectStatement) validPercentileAggr(expr *Call) error {
 	}
 
 	switch expr.Args[0].(type) {
-	case *VarRef:
+	case *VarRef, *RegexLiteral, *Wildcard:
 		// do nothing
 	default:
 		return fmt.Errorf("expected field argument in percentile()")
@@ -1625,7 +1644,7 @@ func (s *SelectStatement) validSampleAggr(expr *Call) error {
 	}
 
 	switch expr.Args[0].(type) {
-	case *VarRef:
+	case *VarRef, *RegexLiteral, *Wildcard:
 		// do nothing
 	default:
 		return fmt.Errorf("expected field argument in sample()")
@@ -1648,11 +1667,7 @@ func (s *SelectStatement) validateAggregates(tr targetRequirement) error {
 					return err
 				}
 				switch expr.Name {
-				case "derivative", "non_negative_derivative":
-					if min, max, got := 1, 2, len(expr.Args); got > max || got < min {
-						return fmt.Errorf("invalid number of arguments for %s, expected at least %d but no more than %d, got %d", expr.Name, min, max, got)
-					}
-				case "elapsed":
+				case "derivative", "non_negative_derivative", "elapsed":
 					if min, max, got := 1, 2, len(expr.Args); got > max || got < min {
 						return fmt.Errorf("invalid number of arguments for %s, expected at least %d but no more than %d, got %d", expr.Name, min, max, got)
 					}
@@ -1660,7 +1675,7 @@ func (s *SelectStatement) validateAggregates(tr targetRequirement) error {
 					if len(expr.Args) == 2 {
 						// Second must be a duration .e.g (1h)
 						if _, ok := expr.Args[1].(*DurationLiteral); !ok {
-							return errors.New("elapsed requires a duration argument")
+							return fmt.Errorf("second argument to %s must be a duration, got %T", expr.Name, expr.Args[1])
 						}
 					}
 				case "difference", "cumulative_sum":
@@ -1706,7 +1721,7 @@ func (s *SelectStatement) validateAggregates(tr targetRequirement) error {
 						}
 
 						switch fc := c.Args[0].(type) {
-						case *VarRef, *Wildcard:
+						case *VarRef, *Wildcard, *RegexLiteral:
 							// do nothing
 						case *Call:
 							if fc.Name != "distinct" || expr.Name != "count" {
@@ -1774,7 +1789,7 @@ func (s *SelectStatement) validateAggregates(tr targetRequirement) error {
 					return fmt.Errorf("invalid number of arguments for %s, expected %d, got %d", expr.Name, exp, got)
 				}
 				switch fc := expr.Args[0].(type) {
-				case *VarRef, *Wildcard:
+				case *VarRef, *Wildcard, *RegexLiteral:
 					// do nothing
 				case *Call:
 					if fc.Name != "distinct" || expr.Name != "count" {

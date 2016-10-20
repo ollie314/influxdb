@@ -23,6 +23,13 @@
 - [#7388](https://github.com/influxdata/influxdb/pull/7388): Implement cumulative_sum() function.
 - [#7441](https://github.com/influxdata/influxdb/pull/7441): Speed up shutdown by closing shards concurrently.
 - [#7146](https://github.com/influxdata/influxdb/issues/7146): Add max-values-per-tag to limit high tag cardinality data
+- [#5955](https://github.com/influxdata/influxdb/issues/5955): Make regex work on field and dimension keys in SELECT clause.
+- [#7470](https://github.com/influxdata/influxdb/pull/7470): Reduce map allocations when computing the TagSet of a measurement.
+- [#6894](https://github.com/influxdata/influxdb/issues/6894): Support `INFLUX_USERNAME` and `INFLUX_PASSWORD` for setting username/password in the CLI.
+- [#6896](https://github.com/influxdata/influxdb/issues/6896): Correctly read in input from a non-interactive stream for the CLI.
+- [#7463](https://github.com/influxdata/influxdb/pull/7463): Make input plugin services open/close idempotent.
+- [#7473](https://github.com/influxdata/influxdb/pull/7473): Align binary math expression streams by time.
+- [#7281](https://github.com/influxdata/influxdb/pull/7281): Add stats for active compactions, compaction errors.
 
 ### Bugfixes
 
@@ -39,6 +46,10 @@
 - [#7226](https://github.com/influxdata/influxdb/issues/7226): Fix database locked up when deleting shards
 - [#7382](https://github.com/influxdata/influxdb/issues/7382): Shard stats include wal path tag so disk bytes make more sense.
 - [#7385](https://github.com/influxdata/influxdb/pull/7385): Reduce query planning allocations
+- [#7436](https://github.com/influxdata/influxdb/issues/7436): Remove accidentally added string support for the stddev call.
+- [#7161](https://github.com/influxdata/influxdb/issues/7161): Drop measurement causes cache max memory exceeded error.
+- [#7334](https://github.com/influxdata/influxdb/issues/7334): Panic with unread show series iterators during drop database
+- [#7482](https://github.com/influxdata/influxdb/issues/7482): Fix issue where point would be written to wrong shard.
 
 ## v1.0.2 [2016-10-05]
 

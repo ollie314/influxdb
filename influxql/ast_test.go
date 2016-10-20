@@ -390,6 +390,23 @@ func TestSelectStatement_RewriteFields(t *testing.T) {
 			stmt:    `SELECT mean(*) AS alias FROM cpu`,
 			rewrite: `SELECT mean(value1::float) AS alias_value1, mean(value2::integer) AS alias_value2 FROM cpu`,
 		},
+
+		// Query regex
+		{
+			stmt:    `SELECT /1/ FROM cpu`,
+			rewrite: `SELECT value1::float FROM cpu`,
+		},
+
+		{
+			stmt:    `SELECT value1 FROM cpu GROUP BY /h/`,
+			rewrite: `SELECT value1::float FROM cpu GROUP BY host`,
+		},
+
+		// Query regex
+		{
+			stmt:    `SELECT mean(/1/) FROM cpu`,
+			rewrite: `SELECT mean(value1::float) AS mean_value1 FROM cpu`,
+		},
 	}
 
 	for i, tt := range tests {
@@ -1293,6 +1310,29 @@ func TestSources_HasSystemSource(t *testing.T) {
 	ok = sources.HasSystemSource()
 	if ok {
 		t.Errorf("expected to find no system source, found one")
+	}
+}
+
+// Parse statements that might appear valid but should return an error.
+// If allowed to execute, at least some of these statements would result in a panic.
+func TestParse_Errors(t *testing.T) {
+	for _, tt := range []struct {
+		tmpl string
+		good string
+		bad  string
+	}{
+		// Second argument to derivative must be duration
+		{tmpl: `SELECT derivative(f, %s) FROM m`, good: "1h", bad: "true"},
+	} {
+		good := fmt.Sprintf(tt.tmpl, tt.good)
+		if _, err := influxql.ParseStatement(good); err != nil {
+			t.Fatalf("statement %q should have parsed correctly but returned error: %s", good, err)
+		}
+
+		bad := fmt.Sprintf(tt.tmpl, tt.bad)
+		if _, err := influxql.ParseStatement(bad); err == nil {
+			t.Fatalf("statement %q should have resulted in a parse error but did not", bad)
+		}
 	}
 }
 
