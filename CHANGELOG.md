@@ -30,6 +30,7 @@
 - [#7463](https://github.com/influxdata/influxdb/pull/7463): Make input plugin services open/close idempotent.
 - [#7473](https://github.com/influxdata/influxdb/pull/7473): Align binary math expression streams by time.
 - [#7281](https://github.com/influxdata/influxdb/pull/7281): Add stats for active compactions, compaction errors.
+- [#7496](https://github.com/influxdata/influxdb/pull/7496): Filter out series within shards that do not have data for that series.
 
 ### Bugfixes
 
@@ -50,6 +51,7 @@
 - [#7161](https://github.com/influxdata/influxdb/issues/7161): Drop measurement causes cache max memory exceeded error.
 - [#7334](https://github.com/influxdata/influxdb/issues/7334): Panic with unread show series iterators during drop database
 - [#7482](https://github.com/influxdata/influxdb/issues/7482): Fix issue where point would be written to wrong shard.
+- [#7431](https://github.com/influxdata/influxdb/issues/7431): Remove /data/process_continuous_queries endpoint.
 
 ## v1.0.2 [2016-10-05]
 
